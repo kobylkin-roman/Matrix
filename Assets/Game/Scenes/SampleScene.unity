@@ -504,6 +504,8 @@ MonoBehaviour:
   _matrixLoader: {fileID: 2074095289}
   _scale: 1
   _maxOffset: 10
+  cubeMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  instanceMaterial: {fileID: 2100000, guid: a80279f69a1cf4a71a3c5f1dcebb9220, type: 2}
 --- !u!4 &2074095288
 Transform:
   m_ObjectHideFlags: 0

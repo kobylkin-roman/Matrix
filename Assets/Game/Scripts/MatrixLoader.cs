@@ -1,7 +1,6 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
-using Game.Scripts;
 using Newtonsoft.Json;
 
 [Serializable]
@@ -15,11 +14,8 @@ public class Matrix
 
 public class MatrixLoader : MonoBehaviour
 {
-    public List<Matrix> modelData;
-    public List<Matrix> spaceData;
-
-    public List<OptimizedMatrix> optimizedModelData;
-    public List<OptimizedMatrix> optimizedSpaceData;
+    public List<Matrix> modelData { get; private set; }
+    public List<Matrix> spaceData { get; private set; }
 
     public void LoadMatrices()
     {
@@ -50,20 +46,7 @@ public class MatrixLoader : MonoBehaviour
         else
         {
             Debug.Log($"Загружено {modelData.Count} матриц модели и {spaceData.Count} матриц пространства.");
-
-            optimizedModelData = ConvertToOptimizedMatrices(modelData);
-            optimizedSpaceData = ConvertToOptimizedMatrices(spaceData);
         }
-    }
-
-    private List<OptimizedMatrix> ConvertToOptimizedMatrices(List<Matrix> matrices)
-    {
-        List<OptimizedMatrix> optimizedMatrices = new List<OptimizedMatrix>();
-        foreach (var matrix in matrices)
-        {
-            optimizedMatrices.Add(new OptimizedMatrix(matrix));
-        }
-        return optimizedMatrices;
     }
 }
 
