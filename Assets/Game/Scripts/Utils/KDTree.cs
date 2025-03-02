@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -8,7 +9,7 @@ namespace Game.Scripts.Utils
     public class KDTree
     {
         private readonly KDNode _root;
-        private readonly Vector3[] _pointsArray; 
+        private readonly Vector3[] _pointsArray;
 
         public KDTree(List<Vector3> points)
         {
@@ -27,7 +28,6 @@ namespace Game.Scripts.Utils
 
             var node = new KDNode(_pointsArray[median]);
             
-            // Используем Task.Run только при большом количестве точек
             if (end - start > 5000)
             {
                 KDNode left = null, right = null;
@@ -82,7 +82,53 @@ namespace Game.Scripts.Utils
             return best;
         }
 
-        // Быстрая выборка k-го элемента (аналог QuickSort, но сортируем только нужную часть)
+        public List<Vector3> GetNearestNeighbors(Vector3 originalPosition, int k)
+        {
+            var nearestNeighbors = new List<Vector3>();
+            var maxHeap = new SortedList<float, Vector3>(new DuplicateKeyComparer<float>());
+
+            FindKNearest(_root, originalPosition, 0, k, maxHeap);
+
+            foreach (var entry in maxHeap.Values)
+            {
+                nearestNeighbors.Add(entry);
+            }
+
+            return nearestNeighbors;
+        }
+
+        private void FindKNearest(KDNode node, Vector3 target, int depth, int k, SortedList<float, Vector3> maxHeap)
+        {
+            if (node == null) return;
+
+            float nodeDist = (node.point - target).sqrMagnitude;
+            
+            // Если не достигли предела k, просто добавляем
+            if (maxHeap.Count < k)
+            {
+                maxHeap.Add(nodeDist, node.point);
+            }
+            // Если нашли точку ближе, чем самая дальняя в списке, заменяем её
+            else if (nodeDist < maxHeap.Keys.Last())
+            {
+                maxHeap.RemoveAt(maxHeap.Count - 1);
+                maxHeap.Add(nodeDist, node.point);
+            }
+
+            int axis = depth % 3;
+            float delta = target[axis] - node.point[axis];
+
+            KDNode first = delta < 0 ? node.left : node.right;
+            KDNode second = delta < 0 ? node.right : node.left;
+
+            FindKNearest(first, target, depth + 1, k, maxHeap);
+
+            if (delta * delta < maxHeap.Keys.Last() || maxHeap.Count < k)
+            {
+                FindKNearest(second, target, depth + 1, k, maxHeap);
+            }
+        }
+
         private void QuickSelect(Vector3[] points, int left, int right, int k, int axis)
         {
             while (left < right)
@@ -117,5 +163,14 @@ namespace Game.Scripts.Utils
             2 => a.z.CompareTo(b.z),
             _ => throw new ArgumentOutOfRangeException()
         };
+    }
+
+    public class DuplicateKeyComparer<T> : IComparer<T> where T : IComparable
+    {
+        public int Compare(T x, T y)
+        {
+            int result = x.CompareTo(y);
+            return result == 0 ? 1 : result; // Чтобы не было ошибки с дублирующимися ключами
+        }
     }
 }

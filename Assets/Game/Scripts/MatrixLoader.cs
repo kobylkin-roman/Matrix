@@ -23,39 +23,32 @@ public class MatrixLoader : MonoBehaviour
 
     public void LoadMatrices()
     {
-        TextAsset modelJsonAsset = Resources.Load<TextAsset>("Configs/JSON/model");
-        TextAsset spaceJsonAsset = Resources.Load<TextAsset>("Configs/JSON/space");
+        string modelPath = Path.Combine(Application.streamingAssetsPath, "model.json");
+        string spacePath = Path.Combine(Application.streamingAssetsPath, "space.json");
 
-        if (modelJsonAsset == null || spaceJsonAsset == null)
+        if (!File.Exists(modelPath) || !File.Exists(spacePath))
         {
-            Debug.LogError("Ошибка загрузки JSON! Проверьте путь: Resources/Configs/JSON/");
+            Debug.LogError($"Файлы JSON не найдены! Ожидался путь: {modelPath} и {spacePath}");
             return;
         }
 
         try
         {
-            modelData = JsonConvert.DeserializeObject<List<Matrix>>(modelJsonAsset.text);
-            spaceData = JsonConvert.DeserializeObject<List<Matrix>>(spaceJsonAsset.text);
+            string modelJson = File.ReadAllText(modelPath);
+            string spaceJson = File.ReadAllText(spacePath);
+
+            modelData = JsonConvert.DeserializeObject<List<Matrix>>(modelJson);
+            spaceData = JsonConvert.DeserializeObject<List<Matrix>>(spaceJson);
         }
         catch (JsonException e)
         {
             Debug.LogError($"Ошибка при парсинге JSON: {e.Message}");
-            return;
-        }
-
-        if (modelData == null || spaceData == null)
-        {
-            Debug.LogError("JSON файлы пустые или некорректные!");
-        }
-        else
-        {
-            Debug.Log($"Загружено {modelData.Count} матриц модели и {spaceData.Count} матриц пространства.");
         }
     }
     
     public void SaveMatchesToJson(List<MatrixMatch> matches)
     {
-        string path = Path.Combine(Application.dataPath, "Game/Resources/Configs/JSON/matrix_matches.json");
+        string path = Path.Combine(Application.streamingAssetsPath, "matrix_matches.json");
 
         var serializableMatches = matches.Select(m => new
         {
@@ -75,6 +68,5 @@ public class MatrixLoader : MonoBehaviour
             Debug.LogError($"Ошибка при сохранении JSON: {e.Message}");
         }
     }
-
 }
 
