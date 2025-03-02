@@ -1,6 +1,10 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Game.Scripts;
+using Game.Scripts.Utils;
 using Newtonsoft.Json;
 
 [Serializable]
@@ -48,5 +52,29 @@ public class MatrixLoader : MonoBehaviour
             Debug.Log($"Загружено {modelData.Count} матриц модели и {spaceData.Count} матриц пространства.");
         }
     }
+    
+    public void SaveMatchesToJson(List<MatrixMatch> matches)
+    {
+        string path = Path.Combine(Application.dataPath, "Game/Resources/Configs/JSON/matrix_matches.json");
+
+        var serializableMatches = matches.Select(m => new
+        {
+            ModelPosition = new SerializableVector3(m.ModelPosition),
+            SpacePosition = new SerializableVector3(m.SpacePosition),
+            Offset = new SerializableVector3(m.Offset)
+        }).ToList();
+
+        try
+        {
+            string json = JsonConvert.SerializeObject(serializableMatches, Formatting.Indented);
+            File.WriteAllText(path, json);
+            Debug.Log($"Смещения сохранены в {path}");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Ошибка при сохранении JSON: {e.Message}");
+        }
+    }
+
 }
 

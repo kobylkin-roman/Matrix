@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -27,9 +28,8 @@ public class MatrixVisualizer : MonoBehaviour
         _matrixLoader.LoadMatrices();
         BuildKdTree();
         VisualizeMatrices();
-        CompareMatricesWithOffsetsUsingKdTree();
+        StartCoroutine(CompareMatricesWithOffsetsCoroutine());
         VisualizeMatches();
-        CheckUnmatchedMatrices();
     }
 
     private void VisualizeMatrices()
@@ -72,7 +72,7 @@ public class MatrixVisualizer : MonoBehaviour
     private void ChangeColor(DefaultEntity cube, Color color)
     {
         if (_propertyBlock == null) _propertyBlock = new MaterialPropertyBlock();
-        var renderer = cube.GetComponent<Renderer>();
+        var renderer = cube.cubeRenderer;
         renderer.GetPropertyBlock(_propertyBlock);
         _propertyBlock.SetColor("_BaseColor", color);
         renderer.SetPropertyBlock(_propertyBlock);
@@ -85,41 +85,63 @@ public class MatrixVisualizer : MonoBehaviour
         Debug.Log($"K-D дерево построено для {_spacePositions.Count} пространственных матриц.");
     }
 
-    private void CompareMatricesWithOffsetsUsingKdTree()
+    private IEnumerator CompareMatricesWithOffsetsCoroutine()
     {
         if (_matrixLoader.modelData == null || _matrixLoader.spaceData == null)
         {
             Debug.LogError("Матрицы не загружены! Проверьте JSON-файлы.");
-            return;
+            yield break;
         }
 
-        Parallel.ForEach(_matrixLoader.modelData, modelMatrix =>
+        int processed = 0;
+        int total = _matrixLoader.modelData.Count;
+    
+        foreach (var modelMatrix in _matrixLoader.modelData)
         {
             Vector3 originalPosition = new Vector3(modelMatrix.m03, modelMatrix.m13, modelMatrix.m23);
+
             for (int dx = -_maxOffset; dx <= _maxOffset; dx++)
             for (int dy = -_maxOffset; dy <= _maxOffset; dy++)
             for (int dz = -_maxOffset; dz <= _maxOffset; dz++)
             {
                 Vector3 shiftedPosition = ApplyOffset(originalPosition, dx, dy, dz);
                 var nearestNeighbor = _spaceKdTree.GetNearestNeighbor(shiftedPosition);
+
                 if (nearestNeighbor != Vector3.zero && MatricesAreEqual(shiftedPosition, nearestNeighbor))
                 {
-                    lock (_matches)
+                    _matches.Add(new MatrixMatch
                     {
-                        _matches.Add(new MatrixMatch
-                        {
-                            ModelPosition = originalPosition,
-                            SpacePosition = nearestNeighbor,
-                            Offset = new Vector3(dx, dy, dz)
-                        });
-                        _matchedPositions.Add(originalPosition);
+                        ModelPosition = originalPosition,
+                        SpacePosition = nearestNeighbor,
+                        Offset = new Vector3(dx, dy, dz)
+                    });
+                    _matchedPositions.Add(originalPosition);
+                
+                    // Визуализируем совпадение в реальном времени
+                    if (_positionToEntityMap.TryGetValue(nearestNeighbor, out var cube))
+                    {
+                        ChangeColor(cube, Color.green);
                     }
                 }
             }
-        });
 
-        Debug.Log($"Найдено {_matches.Count} совпадений с учетом смещений.");
+            processed++;
+        
+            // Логируем прогресс раз в 10 итераций
+            if (processed % 10 == 0)
+            {
+                Debug.Log($"Обработано {processed}/{total} матриц...");
+            }
+
+            // Разрешаем Unity обновить кадр (освобождаем поток)
+            yield return null;
+        }
+
+        Debug.Log($"Поиск завершён. Найдено {_matches.Count} совпадений.");
+        CheckUnmatchedMatrices();
+        _matrixLoader.SaveMatchesToJson(_matches);
     }
+
 
     private Vector3 ApplyOffset(Vector3 position, int dx, int dy, int dz)
     {

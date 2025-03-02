@@ -502,10 +502,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _matrixLoader: {fileID: 2074095289}
-  _scale: 1
   _maxOffset: 10
-  cubeMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  instanceMaterial: {fileID: 2100000, guid: a80279f69a1cf4a71a3c5f1dcebb9220, type: 2}
+  _tolerance: 0.5
 --- !u!4 &2074095288
 Transform:
   m_ObjectHideFlags: 0
@@ -533,10 +531,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4760d964ca1a647379092df400ddab3b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  modelData: []
-  spaceData: []
-  optimizedModelData: []
-  optimizedSpaceData: []
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
