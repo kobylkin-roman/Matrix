@@ -536,9 +536,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _matrixLoader: {fileID: 2074095289}
-  _maxOffset: 10
-  _tolerance: 0.001
-  _neighborsCount: 100
+  _maxOffset: 100
+  _neighborsCount: 10
 --- !u!4 &2074095288
 Transform:
   m_ObjectHideFlags: 0

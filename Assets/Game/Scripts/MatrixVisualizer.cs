@@ -10,7 +10,6 @@ public class MatrixVisualizer : MonoBehaviour
 {
     [SerializeField] private MatrixLoader _matrixLoader;
     [SerializeField] private int _maxOffset = 10;
-    [SerializeField] private float _tolerance = 0.2f;
     [SerializeField] private int _neighborsCount = 10;
 
     private readonly List<DefaultEntity> _spawnedCubes = new();
@@ -71,7 +70,7 @@ public class MatrixVisualizer : MonoBehaviour
 
     private void ChangeColor(DefaultEntity cube, Color color)
     {
-        if (_propertyBlock == null) _propertyBlock = new MaterialPropertyBlock();
+        _propertyBlock ??= new MaterialPropertyBlock();
         var renderer = cube.cubeRenderer;
         renderer.GetPropertyBlock(_propertyBlock);
         _propertyBlock.SetColor("_BaseColor", color);
@@ -94,62 +93,60 @@ public class MatrixVisualizer : MonoBehaviour
     private IEnumerator CompareMatricesWithOffsetsCoroutine()
     {
         float startTime = Time.realtimeSinceStartup;
-        int total = _matrixLoader.modelData.Count;
-        int batchSize = 100; // Количество элементов за один проход
+        int totalModels = _matrixLoader.modelData.Count;
         int processed = 0;
 
-        for (int i = 0; i < total; i += batchSize)
+        foreach (var modelMatrix in _matrixLoader.modelData)
         {
-            int batchEnd = Mathf.Min(i + batchSize, total);
+            List<Vector3> modelPositions = ExtractPositionsFromMatrix(modelMatrix);
 
-            for (int j = i; j < batchEnd; j++)
+            if (modelPositions.Count == 0)
+                continue;
+
+            Vector3 firstModelPos = modelPositions[0];
+            var candidateOffsets = _spaceKdTree.GetNearestNeighbors(firstModelPos, _neighborsCount)
+                .Select(spacePos => spacePos - firstModelPos)
+                .Where(offset => offset.sqrMagnitude <= _maxOffset * _maxOffset)
+                .ToList();
+
+            foreach (var offset in candidateOffsets)
             {
-                var modelMatrix = _matrixLoader.modelData[j];
-                Vector3 originalPosition = new Vector3(modelMatrix.m03, modelMatrix.m13, modelMatrix.m23);
-                var nearestNeighbors = _spaceKdTree.GetNearestNeighbors(originalPosition, _neighborsCount);
-
-                foreach (var neighbor in nearestNeighbors)
+                if (modelPositions.All(pos => _spacePositions.Contains(pos + offset)))
                 {
-                    Vector3 offset = neighbor - originalPosition;
-
-                    if (offset.sqrMagnitude <= _maxOffset * _maxOffset && MatricesAreEqual(originalPosition + offset, neighbor))
+                    _matches.Add(new MatrixMatch
                     {
-                        _matches.Add(new MatrixMatch
-                        {
-                            ModelPosition = originalPosition,
-                            SpacePosition = neighbor,
-                            Offset = offset
-                        });
-                        _matchedPositions.Add(originalPosition);
+                        ModelPosition = firstModelPos,
+                        SpacePosition = firstModelPos + offset,
+                        Offset = offset
+                    });
 
-                        if (_positionToEntityMap.TryGetValue(neighbor, out var cube))
-                        {
-                            ChangeColor(cube, Color.green);
-                        }
+                    foreach (var pos in modelPositions)
+                    {
+                        _matchedPositions.Add(pos);
                     }
+
+                    break;
                 }
             }
 
-            processed += batchSize;
-            Debug.Log($"Обработано {processed}/{total} матриц...");
-        
-            yield return null; // Разрешаем кадру обновиться
+            processed++;
+            if (processed % 10 == 0)
+            {
+                Debug.Log($"Обработано {processed}/{totalModels} матриц...");
+                yield return null; // Разрешаем кадру обновиться
+            }
         }
 
         Debug.Log($"Поиск завершён за {Time.realtimeSinceStartup - startTime:F2} сек. Найдено {_matches.Count} совпадений.");
-        CheckUnmatchedMatrices();
         _matrixLoader.SaveMatchesToJson(_matches);
     }
 
-    private bool MatricesAreEqual(Vector3 pos1, Vector3 pos2)
+    private List<Vector3> ExtractPositionsFromMatrix(Matrix matrix)
     {
-        return (pos1 - pos2).sqrMagnitude < (_tolerance * _tolerance);
-    }
-
-    private void CheckUnmatchedMatrices()
-    {
-        int unmatchedCount = _matrixLoader.modelData.Count(model => !_matchedPositions.Contains(new Vector3(model.m03, model.m13, model.m23)));
-        Debug.Log($"Матриц модели без совпадений: {unmatchedCount}");
+        return new List<Vector3>
+        {
+            new(matrix.m03, matrix.m13, matrix.m23)
+        };
     }
 
     private void ClearPreviousCubes()
