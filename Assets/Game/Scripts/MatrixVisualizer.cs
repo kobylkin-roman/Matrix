@@ -71,10 +71,10 @@ public class MatrixVisualizer : MonoBehaviour
     private void ChangeColor(DefaultEntity cube, Color color)
     {
         _propertyBlock ??= new MaterialPropertyBlock();
-        var renderer = cube.cubeRenderer;
-        renderer.GetPropertyBlock(_propertyBlock);
+        var cubeRenderer = cube.cubeRenderer;
+        cubeRenderer.GetPropertyBlock(_propertyBlock);
         _propertyBlock.SetColor("_BaseColor", color);
-        renderer.SetPropertyBlock(_propertyBlock);
+        cubeRenderer.SetPropertyBlock(_propertyBlock);
     }
 
     private void BuildKdTree()
@@ -133,7 +133,7 @@ public class MatrixVisualizer : MonoBehaviour
             if (processed % 10 == 0)
             {
                 Debug.Log($"Обработано {processed}/{totalModels} матриц...");
-                yield return null; // Разрешаем кадру обновиться
+                yield return null;
             }
         }
 
